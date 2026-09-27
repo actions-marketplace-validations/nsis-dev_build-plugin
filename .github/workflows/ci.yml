@@ -112,8 +112,11 @@ jobs:
           INSTALLER: ${{ steps.plugin.outputs.installer }}
         run: |
           set -euo pipefail
-          [ "$(basename "$ARCHIVE")" = "HelloC-${GITHUB_SHA::7}.zip" ]
-          [ "$(basename "$INSTALLER")" = "HelloC-${GITHUB_SHA::7}-setup.exe" ]
+          # A tag push versions by the tag, anything else by the short SHA
+          version=${GITHUB_SHA::7}
+          if [ "$GITHUB_REF_TYPE" = tag ]; then version=${GITHUB_REF_NAME#v}; fi
+          [ "$(basename "$ARCHIVE")" = "HelloC-$version.zip" ]
+          [ "$(basename "$INSTALLER")" = "HelloC-$version-setup.exe" ]
           listing=$(unzip -Z1 "$ARCHIVE")
           for target in x86-ansi x86-unicode amd64-unicode; do
             grep -qx "Plugins/$target/HelloC.dll" <<< "$listing"
