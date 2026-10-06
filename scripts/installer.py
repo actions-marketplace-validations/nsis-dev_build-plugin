@@ -5,6 +5,7 @@ Configured through environment variables set by action.yml.
 """
 
 import shutil
+import tempfile
 from pathlib import Path
 
 import common
@@ -13,10 +14,23 @@ from common import BuildError, env, guard, run, set_output
 
 def find_license(tree):
     """The license shown on the installer's page; a Plugin is required to have one."""
-    license = common.find_license(tree)
-    if license is None:
+    licenses = common.find_licenses(tree)
+    if not licenses:
         raise BuildError(f"{tree} has no LICENSE, the installer shows it on its page")
-    return license
+    top = [p for p in licenses if p.parent == tree]
+    # A plain LICENSE (or LICENSE.md) is the whole story; it wins over LICENSE-MIT and friends
+    if len(top) < 2 or common.is_plain_license(top[0]):
+        return licenses[0]
+    # Dual-licensed (LICENSE-MIT, LICENSE-APACHE): the page takes one file, so join them
+    combined = Path(tempfile.mkdtemp()) / "LICENSE.txt"
+    combined.write_text(
+        ("\n" + "-" * 70 + "\n\n").join(
+            f"{p.name}\n\n{p.read_text(encoding='utf-8', errors='replace')}"
+            for p in top
+        ),
+        encoding="utf-8",
+    )
+    return combined
 
 
 def main():
