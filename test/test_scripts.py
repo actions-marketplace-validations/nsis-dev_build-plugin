@@ -254,6 +254,7 @@ def test_stage():
             "Examples/Hello/hello.nsi",
             "Include/Hello.nsh",
             "LICENSE",
+            "LICENSE-MIT",
             "Plugins/x86-unicode/Hello.dll",
             "README.md",
             "readme.txt",
@@ -263,6 +264,7 @@ def test_stage():
         assert installer.find_license(tree) == tree / "LICENSE"
 
         (tree / "LICENSE").unlink()
+        (tree / "LICENSE-MIT").unlink()
         raises(common.BuildError, installer.find_license, tree)
         # Without a top-level one, the shallowest under Docs/ is shown
         for f in ("Docs/Hello/doc/license.rtf", "Docs/Hello/COPYING"):
@@ -271,6 +273,18 @@ def test_stage():
         assert installer.find_license(tree) == tree / "Docs/Hello/COPYING"
         (tree / "UNLICENSE").write_text("")
         assert installer.find_license(tree) == tree / "UNLICENSE"
+        (tree / "UNLICENSE").unlink()
+
+        # Dual-licensed: LICENSE-* files are found and joined for the page
+        (tree / "LICENSE-MIT").write_text("mit text")
+        assert installer.find_license(tree) == tree / "LICENSE-MIT"
+        # ...unless a plain LICENSE sits beside them
+        (tree / "LICENSE").write_text("")
+        assert installer.find_license(tree) == tree / "LICENSE"
+        (tree / "LICENSE").unlink()
+        (tree / "LICENSE-APACHE").write_text("apache text")
+        joined = installer.find_license(tree).read_text()
+        assert "LICENSE-APACHE" in joined and "mit text" in joined, joined
         raises(common.BuildError, archive.stage, tree, tmp / "repo", tmp / "repo")
 
 

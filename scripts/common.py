@@ -58,13 +58,26 @@ LICENSE_STEMS = ("LICENSE", "LICENCE", "COPYING", "UNLICENSE")
 
 
 def is_doc(path, stems=LICENSE_STEMS + ("README",)):
-    """LICENSE, License.md, readme.txt and the like."""
-    return path.is_file() and path.name.split(".")[0].upper() in stems
+    """LICENSE, License.md, LICENSE-MIT, readme.txt and the like."""
+    return path.is_file() and re.split(r"[.\-_]", path.name)[0].upper() in stems
+
+
+def is_plain_license(path):
+    """LICENSE or LICENSE.md, as opposed to LICENSE-MIT."""
+    return re.fullmatch(r"[^.\-_]+(\..*)?", path.name) is not None
 
 
 def find_license(root):
     """First top-level license file, else the shallowest one under Docs/; None if neither."""
-    top = sorted(p for p in root.iterdir() if is_doc(p, LICENSE_STEMS))
+    return next(iter(find_licenses(root)), None)
+
+
+def find_licenses(root):
+    """Every license file, best first: top level, then Docs/ by depth. Shortest name first, so LICENSE beats LICENSE-MIT."""
+    top = sorted(
+        (p for p in root.iterdir() if is_doc(p, LICENSE_STEMS)),
+        key=lambda p: (len(p.name), p.name),
+    )
     docs = root / "Docs"
     nested = sorted(
         (p for p in docs.rglob("*") if is_doc(p, LICENSE_STEMS))
@@ -72,7 +85,7 @@ def find_license(root):
         else (),
         key=lambda p: (len(p.parts), p),
     )
-    return next(iter(top + nested), None)
+    return top + nested
 
 
 def rss_md5(rss, filename):
