@@ -16,7 +16,7 @@ import urllib.request
 from pathlib import Path
 
 # Bumped deliberately, so rebuilding a plugin tag yields the same Plugin API
-PINNED_NSIS_VERSION = "3.12"
+PINNED_NSIS_VERSION = "3.13"
 
 # target: (arch, unicode, PE machine)
 TARGETS = {
@@ -101,7 +101,7 @@ def rss_md5(rss, filename):
 
 def download(url):
     request = urllib.request.Request(
-        url, headers={"User-Agent": "nsis-dev/build-plugin"}
+        url, headers={"User-Agent": "nsis-dev/release-package"}
     )
     for attempt in range(5):
         print(f"Downloading {url}", flush=True)

@@ -162,6 +162,18 @@ def test_toolchain_inputs():
     raises(common.BuildError, check, "msvc", "", "a/Hello.dpr")
     raises(common.BuildError, check, "fpc", "a/Hello.dpr", "")
     raises(common.BuildError, check, "msvc", "", "")
+    check("none", "", "")
+    raises(common.BuildError, check, "none", "a/*.c", "")
+    raises(common.BuildError, check, "none", "", "a/Cargo.toml")
+
+
+def test_pick_toolchain():
+    pick = toolchain.pick
+    assert pick("", "", "") == "none"
+    assert pick("", "a/*.c", "") == "msvc"
+    assert pick("", "", "a/Cargo.toml") == "rust"
+    assert pick("", "", "a/Hello.dpr") == "fpc"
+    assert pick("zig", "a/*.c", "") == "zig"
 
 
 def test_step_outputs():
@@ -178,8 +190,9 @@ def test_step_outputs():
                 "RUNNER_TEMP": tmp,
                 "OUTPUT_DIR": tmp,
                 "GITHUB_OUTPUT": str(outputs),
-                entry.takes.upper(): "Contrib/Hello/hello" + min(entry.exts),
             }
+            if entry.takes:
+                environ[entry.takes.upper()] = "Contrib/Hello/hello" + min(entry.exts)
             with mock.patch.dict(os.environ, environ, clear=True):
                 toolchain.main("resolve")
         written = {line.split("=", 1)[0] for line in outputs.read_text().splitlines()}
@@ -187,16 +200,16 @@ def test_step_outputs():
 
 
 def test_rss_md5():
-    # Shape of https://sourceforge.net/projects/nsis/rss?path=/NSIS%203/3.12
+    # Shape of https://sourceforge.net/projects/nsis/rss?path=/NSIS%203/3.13
     rss = (
-        "<item><link>https://sourceforge.net/projects/nsis/files/NSIS%203/3.12/nsis-3.12.zip/download</link>"
-        '<media:content url="https://sourceforge.net/projects/nsis/files/NSIS 3/3.12/nsis-3.12.zip/download" filesize="1">'
+        "<item><link>https://sourceforge.net/projects/nsis/files/NSIS%203/3.13/nsis-3.13.zip/download</link>"
+        '<media:content url="https://sourceforge.net/projects/nsis/files/NSIS 3/3.13/nsis-3.13.zip/download" filesize="1">'
         '<media:hash algo="md5">00000000000000000000000000000000</media:hash></media:content></item>'
-        '<item><media:content url="https://sourceforge.net/projects/nsis/files/NSIS 3/3.12/nsis-3.12-src.tar.bz2/download" filesize="1818389">'
+        '<item><media:content url="https://sourceforge.net/projects/nsis/files/NSIS 3/3.13/nsis-3.13-src.tar.bz2/download" filesize="1818389">'
         '<media:hash algo="md5">8ec7c3e1228ac4eb96e5e421610b4aae</media:hash></media:content></item>'
     )
     assert (
-        common.rss_md5(rss, "nsis-3.12-src.tar.bz2")
+        common.rss_md5(rss, "nsis-3.13-src.tar.bz2")
         == "8ec7c3e1228ac4eb96e5e421610b4aae"
     )
     raises(common.BuildError, common.rss_md5, rss, "nsis-3.11-src.tar.bz2")
@@ -244,8 +257,17 @@ def test_stage():
             (tmp / f).write_text("")
         (tmp / "repo/README").mkdir()
 
+        headers = tmp / "headers"
+        archive.stage(headers, tmp / "none", tmp / "repo", headers_only=True)
+        assert not (headers / "Plugins").exists()
+        assert (headers / "Include/Hello.nsh").is_file()
+        assert (
+            headers / "Contrib/Hello/hello.c"
+        ).is_file()  # shipped only without a build
+
         tree = tmp / "tree"
         archive.stage(tree, tmp / "plugins", tmp / "repo")
+        assert not (tree / "Contrib").exists()
         files = sorted(
             p.relative_to(tree).as_posix() for p in tree.rglob("*") if p.is_file()
         )
@@ -305,6 +327,13 @@ def test_check_layout():
         "Include/Hello.nsh",
     )
     assert layout(*good) == ([], ["README.md"])
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        for f in ("LICENSE", "Include/Hello.nsh", "Examples/Hello/a.nsi"):
+            (tmp / f).parent.mkdir(parents=True, exist_ok=True)
+            (tmp / f).write_text("")
+        assert check_layout.check(tmp, "Hello")[0] != []
+        assert check_layout.check(tmp, "Hello", headers_only=True)[0] == []
     assert layout(*good, "readme.txt", ".git/x.dll") == ([], [])
     assert layout("Contrib/Hello/Hello.dpr")[0] == ["LICENSE"]
     assert layout("Contrib/Hello/Hello.dpr", "Docs/Hello/License.txt")[0] == []
