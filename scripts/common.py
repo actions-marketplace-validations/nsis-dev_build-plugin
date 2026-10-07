@@ -16,7 +16,7 @@ import urllib.request
 from pathlib import Path
 
 # Bumped deliberately, so rebuilding a plugin tag yields the same Plugin API
-PINNED_NSIS_VERSION = "3.12"
+PINNED_NSIS_VERSION = "3.13"
 
 # target: (arch, unicode, PE machine)
 TARGETS = {

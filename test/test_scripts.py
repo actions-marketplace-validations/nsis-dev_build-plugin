@@ -200,16 +200,16 @@ def test_step_outputs():
 
 
 def test_rss_md5():
-    # Shape of https://sourceforge.net/projects/nsis/rss?path=/NSIS%203/3.12
+    # Shape of https://sourceforge.net/projects/nsis/rss?path=/NSIS%203/3.13
     rss = (
-        "<item><link>https://sourceforge.net/projects/nsis/files/NSIS%203/3.12/nsis-3.12.zip/download</link>"
-        '<media:content url="https://sourceforge.net/projects/nsis/files/NSIS 3/3.12/nsis-3.12.zip/download" filesize="1">'
+        "<item><link>https://sourceforge.net/projects/nsis/files/NSIS%203/3.13/nsis-3.13.zip/download</link>"
+        '<media:content url="https://sourceforge.net/projects/nsis/files/NSIS 3/3.13/nsis-3.13.zip/download" filesize="1">'
         '<media:hash algo="md5">00000000000000000000000000000000</media:hash></media:content></item>'
-        '<item><media:content url="https://sourceforge.net/projects/nsis/files/NSIS 3/3.12/nsis-3.12-src.tar.bz2/download" filesize="1818389">'
+        '<item><media:content url="https://sourceforge.net/projects/nsis/files/NSIS 3/3.13/nsis-3.13-src.tar.bz2/download" filesize="1818389">'
         '<media:hash algo="md5">8ec7c3e1228ac4eb96e5e421610b4aae</media:hash></media:content></item>'
     )
     assert (
-        common.rss_md5(rss, "nsis-3.12-src.tar.bz2")
+        common.rss_md5(rss, "nsis-3.13-src.tar.bz2")
         == "8ec7c3e1228ac4eb96e5e421610b4aae"
     )
     raises(common.BuildError, common.rss_md5, rss, "nsis-3.11-src.tar.bz2")
