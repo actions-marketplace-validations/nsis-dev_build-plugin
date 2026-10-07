@@ -31,7 +31,7 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v7
-      - uses: nsis-dev/release-package@v1
+      - uses: nsis-dev/release-package@v0
         with:
           name: Hello
           sources: Contrib/Hello/*.c
@@ -67,7 +67,7 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v7
-      - uses: nsis-dev/release-package@v1
+      - uses: nsis-dev/release-package@v0
         with:
           name: Hello
           sources: Contrib/Hello/*.c
