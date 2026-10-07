@@ -1,8 +1,8 @@
-# release
+# release-package
 
-![License](https://img.shields.io/github/license/nsis-dev/release?color=blue&style=for-the-badge)
-![Release](https://img.shields.io/github/v/release/nsis-dev/release?style=for-the-badge)
-![CI](https://img.shields.io/github/actions/workflow/status/nsis-dev/release/ci.yml?style=for-the-badge)
+![License](https://img.shields.io/github/license/nsis-dev/release-package?color=blue&style=for-the-badge)
+![Release](https://img.shields.io/github/v/release/nsis-dev/release-package?style=for-the-badge)
+![CI](https://img.shields.io/github/actions/workflow/status/nsis-dev/release-package/ci.yml?style=for-the-badge)
 
 > [!IMPORTANT]
 > This GitHub Action is pre-1.0, expect breaking changes!
@@ -31,7 +31,7 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v7
-      - uses: nsis-dev/release@v1
+      - uses: nsis-dev/release-package@v1
         with:
           name: Hello
           sources: Contrib/Hello/*.c
@@ -67,7 +67,7 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v7
-      - uses: nsis-dev/release@v1
+      - uses: nsis-dev/release-package@v1
         with:
           name: Hello
           sources: Contrib/Hello/*.c

@@ -1,4 +1,4 @@
-# release
+# release-package
 
 A GitHub Action that turns an NSIS package, a plugin's source or data (headers, graphics, language files), into a release, replacing wiki uploads as the way NSIS extensions are distributed.
 
