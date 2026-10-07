@@ -46,8 +46,8 @@ InstallDirRegKey HKLM "Software\NSIS" ""
 
 Section
   SetOutPath "$INSTDIR"
-  File /r "${SRC}\Plugins"
-
+  !insertmacro ShipFolder Plugins
+  !insertmacro ShipFolder Contrib
   !insertmacro ShipFolder Docs
   !insertmacro ShipFolder Examples
   !insertmacro ShipFolder Include

@@ -24,14 +24,16 @@ def resolve_version(ref_type, ref_name, sha):
     return version
 
 
-def stage(tree, plugins, root):
+def stage(tree, plugins, root, headers_only=False):
     """The built Plugins/, root's SHIPPED_DIRS, and the LICENSE and README files at its top."""
-    if not (plugins / "Plugins").is_dir():
+    if not headers_only and not (plugins / "Plugins").is_dir():
         raise BuildError(f"{plugins / 'Plugins'} does not exist")
     shutil.rmtree(tree, ignore_errors=True)
     tree.mkdir(parents=True)
-    shutil.copytree(plugins / "Plugins", tree / "Plugins")
-    for folder in SHIPPED_DIRS:
+    if not headers_only:
+        shutil.copytree(plugins / "Plugins", tree / "Plugins")
+    # Nothing to build means Contrib/ holds data (graphics, language files), not source
+    for folder in SHIPPED_DIRS + ("Contrib",) * headers_only:
         if (root / folder).is_dir():
             shutil.copytree(root / folder, tree / folder)
     for path in root.iterdir():
@@ -56,7 +58,7 @@ def main():
     tree = Path(env("RUNNER_TEMP", tempfile.gettempdir())) / f"archive-{name}"
     archive = Path(env("OUTPUT_DIR", "dist")).resolve() / f"{name}-{version}.zip"
 
-    stage(tree, Path(env("PLUGINS_DIR")), Path.cwd())
+    stage(tree, Path(env("PLUGINS_DIR")), Path.cwd(), env("TOOLCHAIN") == "none")
     write_zip(tree, archive)
 
     set_output("archive", archive)

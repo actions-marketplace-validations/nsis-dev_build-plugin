@@ -9,10 +9,12 @@ lives in TOOLCHAINS, so no caller has to switch on the Toolchain name again.
 """
 
 import importlib
+import os
 import sys
+from pathlib import Path
 from typing import NamedTuple
 
-from common import BuildError, cli, env, set_output
+from common import PINNED_NSIS_VERSION, BuildError, cli, env, set_output
 
 C_EXTS = {".c"}
 CXX_EXTS = {".cpp", ".cxx", ".cc"}
@@ -33,6 +35,8 @@ TOOLCHAINS = {
     "zig": Toolchain("build_c", "", "sources", C_EXTS | CXX_EXTS, True),
     "fpc": Toolchain("build_pascal", "Windows", "project", PASCAL_EXTS, False),
     "rust": Toolchain("build_rust", "Windows", "project", {".rs"}, False),
+    # Headers and examples only: nothing to build, so nothing to take
+    "none": Toolchain("", "", "", frozenset(), False),
 }
 SOURCE_EXTS = frozenset().union(*(t.exts for t in TOOLCHAINS.values()))
 
@@ -45,6 +49,11 @@ def check_inputs(name, sources, project, runner_os=""):
     if runner_os and toolchain.runner_os and runner_os != toolchain.runner_os:
         raise BuildError(f"toolchain {name} needs a {toolchain.runner_os} runner")
 
+    if not toolchain.takes:
+        if sources or project:
+            raise BuildError(f"{name} builds nothing, drop sources and project")
+        return toolchain
+
     given = {"sources": sources, "project": project}
     other = "project" if toolchain.takes == "sources" else "sources"
     if given[other]:
@@ -54,9 +63,31 @@ def check_inputs(name, sources, project, runner_os=""):
     return toolchain
 
 
+def pick(name, sources, project):
+    """The Toolchain to use: the one asked for, else what the given inputs imply."""
+    if name:
+        return name
+    if sources:
+        return "msvc"
+    if project:
+        return "rust" if Path(project).name.lower() == "cargo.toml" else "fpc"
+    return "none"
+
+
 def main(command):
-    name = env("TOOLCHAIN", "msvc")
+    name = os.environ["TOOLCHAIN"] = pick(
+        env("TOOLCHAIN"), env("SOURCES"), env("PROJECT")
+    )
     toolchain = check_inputs(name, env("SOURCES"), env("PROJECT"), env("RUNNER_OS"))
+    if command == "resolve":
+        set_output("toolchain", name)
+    if not toolchain.script:
+        if command == "resolve":
+            set_output("python", sys.executable)
+            # The installer is still compiled with the pinned NSIS
+            set_output("version", PINNED_NSIS_VERSION)
+            set_output("output-dir", Path(env("OUTPUT_DIR", "out")).resolve())
+        return
     if command == "resolve":
         # So the later action.yml steps reuse this interpreter instead of guessing
         set_output("python", sys.executable)

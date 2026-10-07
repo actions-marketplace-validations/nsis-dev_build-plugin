@@ -1,5 +1,5 @@
-name: Build NSIS plugin
-description: Build an NSIS plugin from source, package it as a zip and an installer, and attach both to a release
+name: Release NSIS package
+description: Build an NSIS plugin from source if it has any, package it as a zip and an installer, and attach both to a release
 
 branding:
   color: purple
@@ -7,7 +7,7 @@ branding:
 
 inputs:
   name:
-    description: Plugin name, i.e. the DLL basename scripts call as Name::Func
+    description: Package name; for a plugin, the DLL basename scripts call as Name::Func
     required: true
   sources:
     description: msvc, mingw and zig only; C/C++ source globs (.c, .cpp, .cxx, .cc, .rc)
@@ -15,10 +15,9 @@ inputs:
     description: fpc and rust only; path of the Pascal project file (.dpr, .lpr, .pas) or the plugin's Cargo.toml
   targets:
     description: x86-ansi, x86-unicode, amd64-unicode, arm64-unicode
-    default: x86-unicode,amd64-unicode
+    default: x86-ansi,x86-unicode,amd64-unicode
   toolchain:
-    description: msvc, fpc or rust (Windows runner), mingw (Linux runner), zig (any runner)
-    default: msvc
+    description: msvc, fpc or rust (Windows runner), mingw (Linux runner), zig (any runner), none (nothing to build). Default, from sources and project, is none if neither is set, msvc for sources, rust for a Cargo.toml project, else fpc
   crt:
     description: C/C++ only; static (link the C runtime statically) or none (no CRT, entry point DllMain)
     default: static
@@ -26,8 +25,8 @@ inputs:
     description: Attach the files to the release that triggered the run; false for a check build with another toolchain
     default: "true"
   attestations:
-    description: Attest build provenance of the released files; needs GitHub Team or Enterprise on a private repository
-    default: "true"
+    description: Attest build provenance of the released files; needs the id-token and attestations write permissions, and GitHub Team or Enterprise on a private repository
+    default: "false"
 
 outputs:
   plugins-dir:
@@ -37,7 +36,7 @@ outputs:
     description: Path of the Release Archive
     value: ${{ steps.archive.outputs.archive }}
   installer:
-    description: Path of the Plugin Installer
+    description: Path of the Package Installer
     value: ${{ steps.installer.outputs.installer }}
 
 runs:
@@ -61,18 +60,19 @@ runs:
       shell: bash
       env:
         NAME: ${{ inputs.name }}
+        TOOLCHAIN: ${{ steps.vars.outputs.toolchain }}
         PY: ${{ steps.vars.outputs.python }}
       run: '"$PY" "$GITHUB_ACTION_PATH/scripts/check_layout.py"'
 
     - name: Restore cached plugin API
-      if: inputs.toolchain != 'rust'
+      if: steps.vars.outputs.toolchain != 'rust' && steps.vars.outputs.toolchain != 'none'
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ${{ steps.vars.outputs.plugin-api }}
         key: nsis-plugin-api-${{ steps.vars.outputs.version }}
 
     - name: Restore cached Free Pascal
-      if: inputs.toolchain == 'fpc'
+      if: steps.vars.outputs.toolchain == 'fpc'
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ${{ steps.vars.outputs.fpc-dir }}
@@ -80,20 +80,21 @@ runs:
 
     # Also holds Zig's global cache, so the mingw-w64 CRT it builds per target is kept too
     - name: Restore cached Zig
-      if: inputs.toolchain == 'zig'
+      if: steps.vars.outputs.toolchain == 'zig'
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ${{ steps.vars.outputs.zig-dir }}
         key: zig-${{ steps.vars.outputs.zig-version }}-${{ runner.os }}-${{ runner.arch }}
 
     - name: Build
+      if: steps.vars.outputs.toolchain != 'none'
       shell: bash
       env:
         NAME: ${{ inputs.name }}
         SOURCES: ${{ inputs.sources }}
         PROJECT: ${{ inputs.project }}
         TARGETS: ${{ inputs.targets }}
-        TOOLCHAIN: ${{ inputs.toolchain }}
+        TOOLCHAIN: ${{ steps.vars.outputs.toolchain }}
         CRT: ${{ inputs.crt }}
         PLUGIN_API: ${{ steps.vars.outputs.plugin-api }}
         FPC_DIR: ${{ steps.vars.outputs.fpc-dir }}
@@ -107,6 +108,7 @@ runs:
       shell: bash
       env:
         NAME: ${{ inputs.name }}
+        TOOLCHAIN: ${{ steps.vars.outputs.toolchain }}
         PLUGINS_DIR: ${{ steps.vars.outputs.output-dir }}
         OUTPUT_DIR: ${{ runner.temp }}/dist
         PY: ${{ steps.vars.outputs.python }}
@@ -133,7 +135,7 @@ runs:
       if: inputs.release != 'true' || github.event_name != 'release'
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
-        name: ${{ inputs.name }}-${{ inputs.toolchain }}
+        name: ${{ inputs.name }}-${{ steps.vars.outputs.toolchain }}
         path: ${{ runner.temp }}/dist
         if-no-files-found: error
 

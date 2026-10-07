@@ -1,21 +1,21 @@
-# build-plugin
+# release-package
 
-![License](https://img.shields.io/github/license/nsis-dev/build-plugin?color=blue&style=for-the-badge)
-![Release](https://img.shields.io/github/v/release/nsis-dev/build-plugin?style=for-the-badge)
-![CI](https://img.shields.io/github/actions/workflow/status/nsis-dev/build-plugin/ci.yml?style=for-the-badge)
+![License](https://img.shields.io/github/license/nsis-dev/release-package?color=blue&style=for-the-badge)
+![Release](https://img.shields.io/github/v/release/nsis-dev/release-package?style=for-the-badge)
+![CI](https://img.shields.io/github/actions/workflow/status/nsis-dev/release-package/ci.yml?style=for-the-badge)
 
 > [!IMPORTANT]
-> This GitHub Action is an early proof-of-concept, use at your own risk!
+> This GitHub Action is pre-1.0, expect breaking changes!
 
-Build [NSIS](https://nsis.sourceforge.io/) plugins from source and release them from GitHub.
+Release [NSIS](https://nsis.sourceforge.io/) packages from GitHub: plugins built from source, or headers, graphics and language files with nothing to build.
 
 ## Usage
 
 Build on every push. When a release is published, attach these files to it:
 
 - a Release Archive
-- a Plugin Installer
-- checksums and build attestations
+- a Package Installer
+- checksums, and build attestations on request
 
 ```yaml
 on:
@@ -29,16 +29,15 @@ jobs:
     runs-on: windows-latest
     permissions:
       contents: write
-      id-token: write
-      attestations: write
     steps:
       - uses: actions/checkout@v7
-      - uses: nsis-dev/build-plugin@v1
+      - uses: nsis-dev/release-package@v0
         with:
           name: Hello
           sources: Contrib/Hello/*.c
-          targets: x86-ansi,x86-unicode,amd64-unicode
 ```
+
+A repository with nothing to build (headers, graphics, language files) sets neither `sources` nor `project`, only `name`.
 
 A release of tag `v1.0.0` gets these assets:
 
@@ -49,8 +48,9 @@ A release of tag `v1.0.0` gets these assets:
 | `SHA256SUMS`            | Checksums of the above                                                                  |
 
 Other builds upload the zip and installer as the workflow artifact `<name>-<toolchain>`, versioned by the short commit SHA.
+To attest build provenance, set `attestations: true` and add the `id-token: write` and `attestations: write` permissions.
+Attestations are free on public repositories; a private one needs GitHub Team or Enterprise.
 Check where a released file came from with `gh attestation verify Hello-1.0.0.zip --repo <owner>/<repo>`.
-Attestations are free on public repositories; on a private one they need GitHub Team or Enterprise, so set `attestations: false` and drop the `id-token` and `attestations` permissions there.
 
 To also build with a second Toolchain as a check, use a matrix and release only one of them:
 
@@ -65,11 +65,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     permissions:
       contents: write
-      id-token: write
-      attestations: write
     steps:
       - uses: actions/checkout@v7
-      - uses: nsis-dev/build-plugin@v1
+      - uses: nsis-dev/release-package@v0
         with:
           name: Hello
           sources: Contrib/Hello/*.c
@@ -79,32 +77,32 @@ jobs:
 
 ## Layout
 
-A Plugin repository is laid out like NSISDIR. The action checks this first and fails before building if it isn't:
+A Package repository is laid out like NSISDIR. The action checks this first and fails before building if it isn't:
 
-| Path                | Rule                                                       |
-| ------------------- | ---------------------------------------------------------- |
-| `Contrib/<name>/`   | **Required**, holds the source, not shipped                   |
+| Path                | Rule                                                                                                                                                                                  |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Contrib/<name>/`   | **Required**, holds the source, not shipped. With `toolchain: none` it is optional and ships as-is, e.g. `Contrib/Graphics/` or `Contrib/Language files/`                             |
 | `LICENSE`           | **Required** at the top level or in `Docs/<name>/`, any extension or suffix (`LICENSE-MIT`), or `LICENCE`, `COPYING`, `UNLICENSE`; several are joined on the installer's license page |
-| `README`            | Suggested at the top level, any extension                     |
-| `Docs/<name>/`      | Optional, nothing else in `Docs/`, ships as-is                |
-| `Examples/<name>/`  | Optional, nothing else in `Examples/`, ships as-is            |
-| `Include/`          | Optional, ships as-is                                         |
-| `Plugins/`, `*.dll` | Not committed, the action builds them                         |
+| `README`            | Suggested at the top level, any extension                                                                                                                                             |
+| `Docs/<name>/`      | Optional, nothing else in `Docs/`, ships as-is                                                                                                                                        |
+| `Examples/<name>/`  | Optional, nothing else in `Examples/`, ships as-is                                                                                                                                    |
+| `Include/`          | Optional, ships as-is                                                                                                                                                                 |
+| `Plugins/`, `*.dll` | Not committed, the action builds them                                                                                                                                                 |
 
 `Contrib`, `Docs`, `Examples`, `Include` and `Plugins` must be spelled that way.
 
 ## Inputs
 
-| Name        | Default                     | Description                                                                                                   |
-| ----------- | --------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `name`      |                             | Plugin name, i.e. the DLL basename scripts call as `Name::Func`.                                              |
-| `sources`   |                             | `msvc`, `mingw` and `zig` only: C/C++ source globs (`.c`, `.cpp`, `.cxx`, `.cc`, `.rc`).                      |
-| `project`   |                             | `fpc` and `rust` only: path of the Pascal project file (`.dpr`, `.lpr`, `.pas`) or the plugin's `Cargo.toml`. |
-| `targets`   | `x86-unicode,amd64-unicode` | Any of `x86-ansi`, `x86-unicode`, `amd64-unicode`, `arm64-unicode`. `x86-ansi` is opt-in.                     |
-| `toolchain` | `msvc`                      | `msvc`, `fpc` or `rust` on a Windows runner, `mingw` on a Linux runner, `zig` on any runner.                  |
-| `crt`       | `static`                    | C/C++ only: `static` links the C runtime in; `none` builds without it, entry point `DllMain`.                 |
-| `release`   | `true`                      | Attach the files to the release that triggered the run.                                                       |
-| `attestations` | `true`                   | Attest build provenance. Free on public repositories; a private one needs GitHub Team or Enterprise.          |
+| Name           | Default                              | Description                                                                                                                                                                                                                                                                                                                                                 |
+| -------------- | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`         |                                      | Package name; for a Plugin, the DLL basename scripts call as `Name::Func`.                                                                                                                                                                                                                                                                                  |
+| `sources`      |                                      | `msvc`, `mingw` and `zig` only: C/C++ source globs (`.c`, `.cpp`, `.cxx`, `.cc`, `.rc`).                                                                                                                                                                                                                                                                    |
+| `project`      |                                      | `fpc` and `rust` only: path of the Pascal project file (`.dpr`, `.lpr`, `.pas`) or the plugin's `Cargo.toml`.                                                                                                                                                                                                                                               |
+| `targets`      | `x86-ansi,x86-unicode,amd64-unicode` | Any of `x86-ansi`, `x86-unicode`, `amd64-unicode`, `arm64-unicode`. `arm64-unicode` is opt-in.                                                                                                                                                                                                                                                              |
+| `toolchain`    | from `sources`/`project`             | `msvc`, `fpc` or `rust` on a Windows runner, `mingw` on a Linux runner, `zig` on any runner, `none` to build nothing. Left out, it is `none` without `sources` or `project`, `msvc` with `sources`, `rust` for a `Cargo.toml` project and `fpc` otherwise. `none` ships `Include/`, `Examples/`, `Docs/` and `Contrib/`: headers, graphics, language files. |
+| `crt`          | `static`                             | C/C++ only: `static` links the C runtime in; `none` builds without it, entry point `DllMain`.                                                                                                                                                                                                                                                               |
+| `release`      | `true`                               | Attach the files to the release that triggered the run.                                                                                                                                                                                                                                                                                                     |
+| `attestations` | `false`                              | Attest build provenance, needs the `id-token` and `attestations` write permissions. Free on public repositories; a private one needs GitHub Team or Enterprise.                                                                                                                                                                                             |
 
 Each Toolchain takes exactly one of `sources` and `project`; the action fails before building if the other one is set.
 List inputs are comma or newline separated, so paths may contain spaces.
@@ -114,7 +112,7 @@ There are deliberately no inputs for defines, libraries, include directories or 
 - Every directory holding a matched source is an include directory.
 - A fixed list of common Windows import libraries is linked; unused ones add no imports. If a Plugin needs one that's missing, open an issue.
 - Put defines in a header.
-- The NSIS version of the Plugin API, the Free Pascal version and the Zig version are pinned, and only change in a build-plugin release.
+- The NSIS version of the Plugin API, the Free Pascal version and the Zig version are pinned, and only change in a release release.
 
 ## Outputs
 
@@ -122,7 +120,7 @@ There are deliberately no inputs for defines, libraries, include directories or 
 | ------------- | --------------------------------------------------- |
 | `plugins-dir` | Directory containing `Plugins/<target>/<name>.dll`. |
 | `archive`     | Path of the Release Archive.                        |
-| `installer`   | Path of the Plugin Installer.                       |
+| `installer`   | Path of the Package Installer.                      |
 
 ## Writing the plugin
 
@@ -139,16 +137,16 @@ Include the Plugin API the way NSIS installs it:
 
 > [!NOTE]
 > `arm64-unicode` builds with `msvc` and `zig`; Ubuntu's MinGW has no arm64 compiler.
-> Official NSIS releases only ship x86 stubs, so amd64 and arm64 plugins need a
-> self-built makensis to be used.
+> Official NSIS releases only ship x86 stubs. amd64 plugins work with forks such as
+> [negrutiu/nsis](https://github.com/negrutiu/nsis).
 
 The C/C++ Toolchains differ in which C runtime a `crt: static` Plugin depends on:
 
-| Toolchain | C runtime                                                                                                 |
-| --------- | --------------------------------------------------------------------------------------------------------- |
-| `msvc`    | Linked into the DLL.                                                                                      |
-| `mingw`   | Imported from `msvcrt.dll`, which every Windows has.                                                      |
-| `zig`     | Imported from the Universal CRT, built into Windows 10 and later; Vista to 8.1 need update KB2999226.     |
+| Toolchain | C runtime                                                                                             |
+| --------- | ----------------------------------------------------------------------------------------------------- |
+| `msvc`    | Linked into the DLL.                                                                                  |
+| `mingw`   | Imported from `msvcrt.dll`, which every Windows has.                                                  |
+| `zig`     | Imported from the Universal CRT, built into Windows 10 and later; Vista to 8.1 need update KB2999226. |
 
 With `crt: none` no Toolchain imports a C runtime. `zig` then leaves `uuid` out of the linked libraries, so a Plugin using COM GUIDs such as `IID_IUnknown` defines them itself with `INITGUID`.
 

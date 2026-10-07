@@ -14,7 +14,7 @@ from toolchain import SOURCE_EXTS
 KNOWN_DIRS = ("Contrib", "Docs", "Examples", "Include", "Plugins")
 
 
-def check(root, name):
+def check(root, name, headers_only=False):
     """(errors, suggestions), each a list of (path relative to root, message)."""
     errors, suggestions = [], []
     top = {p.name: p for p in root.iterdir()}
@@ -33,7 +33,9 @@ def check(root, name):
 
     contrib = top.get("Contrib")
     subdirs = {p.name: p for p in contrib.iterdir()} if contrib else {}
-    if name not in subdirs:
+    if headers_only:
+        pass
+    elif name not in subdirs:
         near = [s for s in subdirs if s.lower() == name.lower()]
         errors.append(
             (f"Contrib/{name}", f"rename Contrib/{near[0]}/ to Contrib/{name}/")
@@ -77,7 +79,7 @@ def main():
     if not name:
         print("::error::name is required", flush=True)
         return 1
-    errors, suggestions = check(Path.cwd(), name)
+    errors, suggestions = check(Path.cwd(), name, env("TOOLCHAIN") == "none")
     for level, findings in (("error", errors), ("notice", suggestions)):
         for path, message in findings:
             print(f"::{level} file={path}::{message}")
