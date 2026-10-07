@@ -77,7 +77,7 @@ jobs:
 
 ## Layout
 
-A Package repository is laid out like NSISDIR. The action checks this first and fails before building if it isn't:
+A Package repository is laid out like NSISDIR, as specified in [SPEC.md](SPEC.md) for other tools to implement. The action checks this first and fails before building if it isn't:
 
 | Path                | Rule                                                                                                                                                                                  |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
