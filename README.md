@@ -4,7 +4,7 @@
 ![Release](https://img.shields.io/github/v/release/nsis-dev/build-plugin?style=for-the-badge)
 ![CI](https://img.shields.io/github/actions/workflow/status/nsis-dev/build-plugin/ci.yml?style=for-the-badge)
 
-> [!CAUTION]
+> [!IMPORTANT]
 > This GitHub Action is an early proof-of-concept, use at your own risk!
 
 Build [NSIS](https://nsis.sourceforge.io/) plugins from source and release them from GitHub.
