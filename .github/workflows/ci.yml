@@ -37,7 +37,7 @@ jobs:
         shell: bash
         run: ${{ runner.os == 'Windows' && 'python' || 'python3' }} test/test_scripts.py
 
-  # The jobs below check out build-plugin into a subdirectory and copy test/hello to the
+  # The jobs below check out release into a subdirectory and copy test/hello to the
   # workspace root, so the action sees a Plugin repository as a plugin author's would be
   plugin:
     name: Plugin / ${{ matrix.toolchain }}
@@ -75,15 +75,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          path: build-plugin
+          path: release
 
       - name: Copy test plugin
         shell: bash
-        run: cp -r build-plugin/test/hello/. .
+        run: cp -r release/test/hello/. .
 
       - name: Build
         id: plugin
-        uses: ./build-plugin
+        uses: ./release
         with:
           name: ${{ matrix.plugin }}
           sources: ${{ matrix.sources }}
@@ -140,17 +140,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          path: build-plugin
+          path: release
 
       # Another name, so its build artifact doesn't clash with the plugin job's
       - name: Copy test plugin as HelloNoCrt
         shell: bash
         run: |
-          cp -r build-plugin/test/hello/. .
+          cp -r release/test/hello/. .
           mv Contrib/HelloC Contrib/HelloNoCrt
 
       - name: Build
-        uses: ./build-plugin
+        uses: ./release
         with:
           name: HelloNoCrt
           sources: Contrib/HelloNoCrt/*.c
@@ -165,16 +165,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          path: build-plugin
+          path: release
 
       - name: Copy test plugin
         shell: bash
-        run: cp -r build-plugin/test/hello/. .
+        run: cp -r release/test/hello/. .
 
       - name: Build
         id: build
         continue-on-error: true
-        uses: ./build-plugin
+        uses: ./release
         with:
           name: HelloC
           sources: Contrib/HelloC/*.c
@@ -185,7 +185,7 @@ jobs:
         shell: bash
         run: '[ "${{ steps.build.outcome }}" = failure ]'
 
-  # build-plugin itself has no Contrib/HelloC/
+  # release itself has no Contrib/HelloC/
   layout-rejected:
     name: Reject layout
     runs-on: ubuntu-latest

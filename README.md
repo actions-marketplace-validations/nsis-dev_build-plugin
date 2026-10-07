@@ -1,20 +1,20 @@
-# build-plugin
+# release
 
-![License](https://img.shields.io/github/license/nsis-dev/build-plugin?color=blue&style=for-the-badge)
-![Release](https://img.shields.io/github/v/release/nsis-dev/build-plugin?style=for-the-badge)
-![CI](https://img.shields.io/github/actions/workflow/status/nsis-dev/build-plugin/ci.yml?style=for-the-badge)
+![License](https://img.shields.io/github/license/nsis-dev/release?color=blue&style=for-the-badge)
+![Release](https://img.shields.io/github/v/release/nsis-dev/release?style=for-the-badge)
+![CI](https://img.shields.io/github/actions/workflow/status/nsis-dev/release/ci.yml?style=for-the-badge)
 
 > [!IMPORTANT]
 > This GitHub Action is an early proof-of-concept, use at your own risk!
 
-Build [NSIS](https://nsis.sourceforge.io/) plugins from source and release them from GitHub.
+Release [NSIS](https://nsis.sourceforge.io/) packages from GitHub: plugins built from source, or headers, graphics and language files with nothing to build.
 
 ## Usage
 
 Build on every push. When a release is published, attach these files to it:
 
 - a Release Archive
-- a Plugin Installer
+- a Package Installer
 - checksums and build attestations
 
 ```yaml
@@ -33,12 +33,14 @@ jobs:
       attestations: write
     steps:
       - uses: actions/checkout@v7
-      - uses: nsis-dev/build-plugin@v1
+      - uses: nsis-dev/release@v1
         with:
           name: Hello
           sources: Contrib/Hello/*.c
           targets: x86-ansi,x86-unicode,amd64-unicode
 ```
+
+A repository with nothing to build (headers, graphics, language files) sets neither `sources` nor `project`, only `name`.
 
 A release of tag `v1.0.0` gets these assets:
 
@@ -69,7 +71,7 @@ jobs:
       attestations: write
     steps:
       - uses: actions/checkout@v7
-      - uses: nsis-dev/build-plugin@v1
+      - uses: nsis-dev/release@v1
         with:
           name: Hello
           sources: Contrib/Hello/*.c
@@ -79,11 +81,11 @@ jobs:
 
 ## Layout
 
-A Plugin repository is laid out like NSISDIR. The action checks this first and fails before building if it isn't:
+A Package repository is laid out like NSISDIR. The action checks this first and fails before building if it isn't:
 
 | Path                | Rule                                                       |
 | ------------------- | ---------------------------------------------------------- |
-| `Contrib/<name>/`   | **Required**, holds the source, not shipped                   |
+| `Contrib/<name>/`   | **Required**, holds the source, not shipped. With `toolchain: none` it is optional and ships as-is, e.g. `Contrib/Graphics/` or `Contrib/Language files/` |
 | `LICENSE`           | **Required** at the top level or in `Docs/<name>/`, any extension or suffix (`LICENSE-MIT`), or `LICENCE`, `COPYING`, `UNLICENSE`; several are joined on the installer's license page |
 | `README`            | Suggested at the top level, any extension                     |
 | `Docs/<name>/`      | Optional, nothing else in `Docs/`, ships as-is                |
@@ -97,11 +99,11 @@ A Plugin repository is laid out like NSISDIR. The action checks this first and f
 
 | Name        | Default                     | Description                                                                                                   |
 | ----------- | --------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `name`      |                             | Plugin name, i.e. the DLL basename scripts call as `Name::Func`.                                              |
+| `name`      |                             | Package name; for a Plugin, the DLL basename scripts call as `Name::Func`.                                            |
 | `sources`   |                             | `msvc`, `mingw` and `zig` only: C/C++ source globs (`.c`, `.cpp`, `.cxx`, `.cc`, `.rc`).                      |
 | `project`   |                             | `fpc` and `rust` only: path of the Pascal project file (`.dpr`, `.lpr`, `.pas`) or the plugin's `Cargo.toml`. |
 | `targets`   | `x86-unicode,amd64-unicode` | Any of `x86-ansi`, `x86-unicode`, `amd64-unicode`, `arm64-unicode`. `x86-ansi` is opt-in.                     |
-| `toolchain` | `msvc`                      | `msvc`, `fpc` or `rust` on a Windows runner, `mingw` on a Linux runner, `zig` on any runner.                  |
+| `toolchain` | from `sources`/`project` | `msvc`, `fpc` or `rust` on a Windows runner, `mingw` on a Linux runner, `zig` on any runner, `none` to build nothing. Left out, it is `none` without `sources` or `project`, `msvc` with `sources`, `rust` for a `Cargo.toml` project and `fpc` otherwise. `none` ships `Include/`, `Examples/`, `Docs/` and `Contrib/`: headers, graphics, language files. |
 | `crt`       | `static`                    | C/C++ only: `static` links the C runtime in; `none` builds without it, entry point `DllMain`.                 |
 | `release`   | `true`                      | Attach the files to the release that triggered the run.                                                       |
 | `attestations` | `true`                   | Attest build provenance. Free on public repositories; a private one needs GitHub Team or Enterprise.          |
@@ -114,7 +116,7 @@ There are deliberately no inputs for defines, libraries, include directories or 
 - Every directory holding a matched source is an include directory.
 - A fixed list of common Windows import libraries is linked; unused ones add no imports. If a Plugin needs one that's missing, open an issue.
 - Put defines in a header.
-- The NSIS version of the Plugin API, the Free Pascal version and the Zig version are pinned, and only change in a build-plugin release.
+- The NSIS version of the Plugin API, the Free Pascal version and the Zig version are pinned, and only change in a release release.
 
 ## Outputs
 
@@ -122,7 +124,7 @@ There are deliberately no inputs for defines, libraries, include directories or 
 | ------------- | --------------------------------------------------- |
 | `plugins-dir` | Directory containing `Plugins/<target>/<name>.dll`. |
 | `archive`     | Path of the Release Archive.                        |
-| `installer`   | Path of the Plugin Installer.                       |
+| `installer`   | Path of the Package Installer.                       |
 
 ## Writing the plugin
 

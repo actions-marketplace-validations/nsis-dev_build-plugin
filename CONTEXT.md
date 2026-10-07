@@ -1,12 +1,16 @@
-# build-plugin
+# release
 
-A GitHub Action that turns a plugin's source into released binaries, replacing wiki uploads as the way NSIS plugins are distributed.
+A GitHub Action that turns an NSIS package, a plugin's source or data (headers, graphics, language files), into a release, replacing wiki uploads as the way NSIS extensions are distributed.
 
 ## Language
 
+**Package**:
+What a repository releases: a Plugin, or a data-only package (headers, graphics, language files) built with `toolchain: none`, which ships `Include/`, `Examples/`, `Docs/` and `Contrib/` as they are. Its name is the `name` input.
+_Avoid_: extension, add-on
+
 **Plugin**:
 One DLL that NSIS scripts call as `Name::Function`, kept in its own repository. Its name is the DLL basename.
-_Avoid_: extension, add-on, package
+_Avoid_: extension, add-on
 
 **Target**:
 One of the NSIS 3 architecture and charset combinations a Plugin is built for: `x86-ansi`, `x86-unicode`, `amd64-unicode`, `arm64-unicode`. It names the folder under `Plugins/`.
@@ -28,9 +32,9 @@ The two ways a Plugin points at its code. `msvc`, `mingw` and `zig` take **sourc
 _Avoid_: entry, manifest (except for Cargo's own). "Input" means an `action.yml` input, not the value of one.
 
 **Release Archive**:
-The zip attached to a release, `<Name>-<version>.zip`. It contains the built `Plugins/<target>/<Name>.dll`, whichever of `Docs/`, `Examples/` and `Include/` the repository has, its top-level LICENSE and README if there are any, laid out so it unzips into NSISDIR.
+The zip attached to a release, `<Name>-<version>.zip`. It contains the built `Plugins/<target>/<Name>.dll` (none for a data-only Package), plus `Contrib/` for one, whichever of `Docs/`, `Examples/` and `Include/` the repository has, its top-level LICENSE and README if there are any, laid out so it unzips into NSISDIR.
 _Avoid_: bundle, distribution
 
-**Plugin Installer**:
+**Package Installer**:
 The Windows installer attached to a release, `<Name>-<version>-setup.exe`. It copies the Release Archive's NSISDIR folders into an existing NSIS installation; the LICENSE is not copied, it is shown on the license page. A top-level LICENSE wins, and several (`LICENSE-MIT`, `LICENSE-APACHE`) are joined into one page; without one, the shallowest one under `Docs/` is shown.
-_Avoid_: setup, package
+_Avoid_: setup

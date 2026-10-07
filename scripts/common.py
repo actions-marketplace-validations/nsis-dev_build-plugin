@@ -100,9 +100,7 @@ def rss_md5(rss, filename):
 
 
 def download(url):
-    request = urllib.request.Request(
-        url, headers={"User-Agent": "nsis-dev/build-plugin"}
-    )
+    request = urllib.request.Request(url, headers={"User-Agent": "nsis-dev/release"})
     for attempt in range(5):
         print(f"Downloading {url}", flush=True)
         try:
