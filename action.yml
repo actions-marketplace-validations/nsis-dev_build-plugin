@@ -25,8 +25,8 @@ inputs:
     description: Attach the files to the release that triggered the run; false for a check build with another toolchain
     default: "true"
   attestations:
-    description: Attest build provenance of the released files; needs GitHub Team or Enterprise on a private repository
-    default: "true"
+    description: Attest build provenance of the released files; needs the id-token and attestations write permissions, and GitHub Team or Enterprise on a private repository
+    default: "false"
 
 outputs:
   plugins-dir:
