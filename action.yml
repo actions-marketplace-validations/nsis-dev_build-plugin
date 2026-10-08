@@ -17,7 +17,7 @@ inputs:
     description: x86-ansi, x86-unicode, amd64-unicode, arm64-unicode
     default: x86-ansi,x86-unicode,amd64-unicode
   toolchain:
-    description: msvc, fpc or rust (Windows runner), mingw (Linux runner), zig (any runner), none (nothing to build). Default, from sources and project, is none if neither is set, msvc for sources, rust for a Cargo.toml project, else fpc
+    description: msvc, fpc or rust (Windows runner), mingw (Linux runner), zig (any runner), none (nothing to build), prebuilt (ship the committed Plugins/<target>/<name>.dll, only for plugins whose source is lost). Default, from sources and project, is none if neither is set, msvc for sources, rust for a Cargo.toml project, else fpc
   crt:
     description: C/C++ only; static (link the C runtime statically) or none (no CRT, entry point DllMain)
     default: static
@@ -69,7 +69,7 @@ runs:
       run: '"$PY" "$GITHUB_ACTION_PATH/scripts/check_layout.py"'
 
     - name: Restore cached plugin API
-      if: steps.vars.outputs.toolchain != 'rust' && steps.vars.outputs.toolchain != 'none'
+      if: steps.vars.outputs.toolchain != 'rust' && steps.vars.outputs.toolchain != 'none' && steps.vars.outputs.toolchain != 'prebuilt'
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ${{ steps.vars.outputs.plugin-api }}
@@ -91,7 +91,7 @@ runs:
         key: zig-${{ steps.vars.outputs.zig-version }}-${{ runner.os }}-${{ runner.arch }}
 
     - name: Build
-      if: steps.vars.outputs.toolchain != 'none'
+      if: steps.vars.outputs.toolchain != 'none' && steps.vars.outputs.toolchain != 'prebuilt'
       shell: bash
       env:
         NAME: ${{ inputs.name }}

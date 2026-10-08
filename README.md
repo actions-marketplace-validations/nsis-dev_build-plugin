@@ -39,6 +39,8 @@ jobs:
 
 A repository with nothing to build (headers, graphics, language files) sets neither `sources` nor `project`, only `name`.
 
+A plugin whose source is lost can set `toolchain: prebuilt` and commit `Plugins/<target>/<name>.dll` instead. This is an antipattern and the action warns about it: nobody can rebuild or verify those DLLs, and an attestation only proves the workflow copied them. Use it only to keep an otherwise abandoned plugin available.
+
 A release of tag `v1.0.0` gets these assets:
 
 | Asset                   | Contents                                                                                |
@@ -81,13 +83,13 @@ A Package repository is laid out like NSISDIR, as specified in [SPEC.md](SPEC.md
 
 | Path                | Rule                                                                                                                                                                                  |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Contrib/<name>/`   | **Required**, holds the source, not shipped. With `toolchain: none` it is optional and ships as-is, e.g. `Contrib/Graphics/` or `Contrib/Language files/`                             |
+| `Contrib/<name>/`   | **Required**, holds the source, not shipped. With `toolchain: none` it is optional and ships as-is, e.g. `Contrib/Graphics/` or `Contrib/Language files/`. With `prebuilt` it is optional and not shipped |
 | `LICENSE`           | **Required** (a warning with `strict: false`) at the top level or in `Docs/<name>/`, any extension or suffix (`LICENSE-MIT`), or `LICENCE`, `COPYING`, `UNLICENSE`; several are joined on the installer's license page |
 | `README`            | Suggested at the top level, any extension                                                                                                                                             |
 | `Docs/<name>/`      | Optional, nothing else in `Docs/`, ships as-is                                                                                                                                        |
 | `Examples/<name>/`  | Optional, nothing else in `Examples/`, ships as-is                                                                                                                                    |
 | `Include/`          | Optional, ships as-is                                                                                                                                                                 |
-| `Plugins/`, `*.dll` | Not committed, the action builds them                                                                                                                                                 |
+| `Plugins/`, `*.dll` | Not committed, the action builds them. With `toolchain: prebuilt`, `Plugins/<target>/<name>.dll` is committed and each DLL's PE machine must match its target                        |
 
 `Contrib`, `Docs`, `Examples`, `Include` and `Plugins` must be spelled that way.
 
@@ -99,7 +101,7 @@ A Package repository is laid out like NSISDIR, as specified in [SPEC.md](SPEC.md
 | `sources`      |                                      | `msvc`, `mingw` and `zig` only: C/C++ source globs (`.c`, `.cpp`, `.cxx`, `.cc`, `.rc`).                                                                                                                                                                                                                                                                    |
 | `project`      |                                      | `fpc` and `rust` only: path of the Pascal project file (`.dpr`, `.lpr`, `.pas`) or the plugin's `Cargo.toml`.                                                                                                                                                                                                                                               |
 | `targets`      | `x86-ansi,x86-unicode,amd64-unicode` | Any of `x86-ansi`, `x86-unicode`, `amd64-unicode`, `arm64-unicode`. `arm64-unicode` is opt-in.                                                                                                                                                                                                                                                              |
-| `toolchain`    | from `sources`/`project`             | `msvc`, `fpc` or `rust` on a Windows runner, `mingw` on a Linux runner, `zig` on any runner, `none` to build nothing. Left out, it is `none` without `sources` or `project`, `msvc` with `sources`, `rust` for a `Cargo.toml` project and `fpc` otherwise. `none` ships `Include/`, `Examples/`, `Docs/` and `Contrib/`: headers, graphics, language files. |
+| `toolchain`    | from `sources`/`project`             | `msvc`, `fpc` or `rust` on a Windows runner, `mingw` on a Linux runner, `zig` on any runner, `none` to build nothing, `prebuilt` to ship the committed DLLs (an antipattern, see above). Left out, it is `none` without `sources` or `project`, `msvc` with `sources`, `rust` for a `Cargo.toml` project and `fpc` otherwise. `none` ships `Include/`, `Examples/`, `Docs/` and `Contrib/`: headers, graphics, language files. `prebuilt` ignores `targets` and ships every committed one. |
 | `crt`          | `static`                             | C/C++ only: `static` links the C runtime in; `none` builds without it, entry point `DllMain`.                                                                                                                                                                                                                                                               |
 | `strict`       | `true`                               | Fail on every layout violation. `false` is for legacy packages: a missing LICENSE is only a warning, and the installer has no license page.                                                                                                                                                                                                                 |
 | `release`      | `true`                               | Attach the files to the release that triggered the run.                                                                                                                                                                                                                                                                                                     |

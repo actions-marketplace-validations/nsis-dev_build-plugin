@@ -11,6 +11,7 @@ The key words MUST, MUST NOT, SHOULD and MAY are to be interpreted as described 
 - **Package**: what one repository releases. It has one **name**, `<name>`, matching `[A-Za-z0-9_-]+`. Names are case-sensitive.
 - **Plugin Package**: a Package that releases a DLL called from NSIS scripts as `<name>::Function`.
 - **Data Package**: a Package with nothing to build, such as headers, graphics or language files.
+- **Prebuilt Package**: a Plugin Package that commits its DLLs instead of their source, for plugins whose source is lost. It is NOT RECOMMENDED: its DLLs can't be rebuilt or verified.
 - **Target**: one of `x86-ansi`, `x86-unicode`, `amd64-unicode`, `arm64-unicode`.
 - **License file**: a regular file whose name, cut at the first `.`, `-` or `_` and compared case-insensitively, is `LICENSE`, `LICENCE`, `COPYING` or `UNLICENSE`. For example `LICENSE`, `License.md` and `LICENSE-MIT` all count.
 - **Readme file**: as a License file, with the stem `README`.
@@ -27,7 +28,7 @@ The repository root is laid out like NSISDIR.
 | `Include/`         | MAY exist, with any content                                            | MAY exist, with any content     | yes                                       |
 | License file       | MUST exist at the top level or under `Docs/<name>/`                    | same                            | top level only                            |
 | Readme file        | SHOULD exist at the top level                                          | same                            | yes                                       |
-| `Plugins/`         | MUST NOT exist                                                         | MUST NOT exist                  | built (§3)                                |
+| `Plugins/`         | MUST NOT exist, except in a Prebuilt Package (§2.5)                    | MUST NOT exist                  | built (§3)                                |
 
 ### 2.1 Spelling
 
@@ -47,7 +48,16 @@ A source file is any file under `Contrib/<name>/`, at any depth, with one of the
 - There MUST NOT be a `*.dll` file anywhere in the repository. Paths with a component starting with `.`, such as `.git/`, are exempt.
 - There MUST NOT be a top-level `Plugins/`.
 
-### 2.5 Everything else
+A Prebuilt Package is exempt from both, as §2.5 says.
+
+### 2.5 Prebuilt Package
+
+- `Contrib/<name>/` MAY exist and is not shipped.
+- `Plugins/<target>/<name>.dll` MUST exist for at least one Target. Each DLL's PE machine MUST match its Target, as in §3.
+- There MUST NOT be any other `*.dll` file, with the same exemption as in §2.4.
+- A validator SHOULD warn that the Package is prebuilt.
+
+### 2.6 Everything else
 
 Other top-level entries, such as `scripts/`, `.github/`, `CHANGELOG.md` or a workspace `Cargo.toml`, are allowed. They are ignored and MUST NOT be shipped.
 

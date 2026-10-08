@@ -4,20 +4,22 @@
 Configured through the environment variables NAME, TOOLCHAIN and STRICT, set by action.yml.
 """
 
+import struct
 import sys
 from pathlib import Path
 
-from common import env, find_license, is_doc
+from common import TARGETS, BuildError, env, find_license, is_doc, pe_machine
 from toolchain import SOURCE_EXTS
 
 # Folders that mirror NSISDIR, spelled the way NSIS spells them
 KNOWN_DIRS = ("Contrib", "Docs", "Examples", "Include", "Plugins")
 
 
-def check(root, name, headers_only=False, strict=True):
+def check(root, name, headers_only=False, strict=True, prebuilt=False):
     """(errors, warnings, suggestions), each a list of (path relative to root, message).
 
     Not strict, the violations legacy packages can't fix themselves are warnings instead.
+    Prebuilt, Plugins/<target>/<name>.dll is committed instead of built from Contrib/<name>/.
     """
     errors, warnings, suggestions = [], [], []
     lenient = errors if strict else warnings
@@ -28,16 +30,42 @@ def check(root, name, headers_only=False, strict=True):
             if entry != known and entry.lower() == known.lower():
                 errors.append((entry, f"rename {entry}/ to {known}/"))
 
-    if "Plugins" in top:
+    if "Plugins" in top and not prebuilt:
         errors.append(("Plugins", "Plugins/ is built by the action, don't commit it"))
+    shipped = 0
     for dll in sorted(root.rglob("*.dll")):
         rel = dll.relative_to(root)
-        if not any(part.startswith(".") for part in rel.parts):
+        if any(part.startswith(".") for part in rel.parts):
+            continue
+        parts = rel.parts
+        if not prebuilt:
             errors.append((rel.as_posix(), "don't commit DLLs, the action builds them"))
+        elif not (
+            len(parts) == 3
+            and parts[0] == "Plugins"
+            and parts[1] in TARGETS
+            and parts[2] == f"{name}.dll"
+        ):
+            errors.append(
+                (rel.as_posix(), f"only Plugins/<target>/{name}.dll is allowed")
+            )
+        else:
+            machine = TARGETS[parts[1]][2]
+            try:
+                got = pe_machine(dll.read_bytes())
+            except (BuildError, struct.error):
+                got = None
+            if got != machine:
+                errors.append((rel.as_posix(), f"not a {parts[1].split('-')[0]} DLL"))
+            shipped += 1
+    if prebuilt and not shipped:
+        errors.append(
+            (f"Plugins/x86-ansi/{name}.dll", f"commit Plugins/<target>/{name}.dll")
+        )
 
     contrib = top.get("Contrib")
     subdirs = {p.name: p for p in contrib.iterdir()} if contrib else {}
-    if headers_only:
+    if headers_only or prebuilt:
         pass
     elif name not in subdirs:
         near = [s for s in subdirs if s.lower() == name.lower()]
@@ -83,8 +111,13 @@ def main():
     if not name:
         print("::error::name is required", flush=True)
         return 1
+    toolchain = env("TOOLCHAIN")
     errors, warnings, suggestions = check(
-        Path.cwd(), name, env("TOOLCHAIN") == "none", env("STRICT") != "false"
+        Path.cwd(),
+        name,
+        toolchain == "none",
+        env("STRICT") != "false",
+        toolchain == "prebuilt",
     )
     for level, findings in (
         ("error", errors),
