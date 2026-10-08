@@ -67,9 +67,12 @@ Its root maps onto NSISDIR and contains exactly:
 Producing an installer is OPTIONAL. If produced, it is named `<name>-<version>-setup.exe` and:
 
 - MUST copy the Release Archive's folders into an existing NSIS installation, and MUST NOT install the License or Readme files.
-- MUST show a license page. Its text is every top-level License file, shortest name first, joined; without one, the shallowest License file under `Docs/<name>/`.
+- MUST show a license page if the Release Archive's repository has a License file. Its text is every top-level License file, shortest name first, joined; without one, the shallowest License file under `Docs/<name>/`. Without any License file, which only a lenient validator accepts, there is no license page.
 
 ## 5. Conformance
 
 - A **validator** conforms if it rejects every repository that violates a MUST or MUST NOT of §2 and accepts every other. It SHOULD report a missing Readme file as a warning.
-- A **packager** conforms if, given a valid repository, it produces a Release Archive as specified in §3, and an installer, if any, as specified in §4.
+- A validator MAY offer a **lenient** mode for legacy Packages whose authors can no longer be asked to fix them. In it, the violations listed below MUST be reported as warnings instead of rejecting the repository; every other rule applies unchanged. The list:
+  - no License file (§2)
+- A **packager** MAY package a repository that a lenient validator accepts.
+- A packager conforms if, given a valid repository, it produces a Release Archive as specified in §3, and an installer, if any, as specified in §4.

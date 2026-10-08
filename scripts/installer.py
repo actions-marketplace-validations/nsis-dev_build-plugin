@@ -13,10 +13,10 @@ from common import BuildError, env, guard, run, set_output
 
 
 def find_license(tree):
-    """The license shown on the installer's page; a Plugin is required to have one."""
+    """The license shown on the installer's page; None if the tree has none."""
     licenses = common.find_licenses(tree)
     if not licenses:
-        raise BuildError(f"{tree} has no LICENSE, the installer shows it on its page")
+        return None
     top = [p for p in licenses if p.parent == tree]
     # A plain LICENSE (or LICENSE.md) is the whole story; it wins over LICENSE-MIT and friends
     if len(top) < 2 or common.is_plain_license(top[0]):
@@ -58,7 +58,11 @@ def main():
         f"-DSRC={tree}",
         f"-DOUTFILE={installer}",
     ]
-    cmd.append(f"-DLICENSE={find_license(tree)}")
+    license = find_license(tree)
+    if license:
+        cmd.append(f"-DLICENSE={license}")
+    elif env("STRICT") != "false":
+        raise BuildError(f"{tree} has no LICENSE, the installer shows it on its page")
     cmd.append(str(Path(__file__).with_suffix(".nsi")))
     run(cmd)
 

@@ -287,7 +287,7 @@ def test_stage():
 
         (tree / "LICENSE").unlink()
         (tree / "LICENSE-MIT").unlink()
-        raises(common.BuildError, installer.find_license, tree)
+        assert installer.find_license(tree) is None
         # Without a top-level one, the shallowest under Docs/ is shown
         for f in ("Docs/Hello/doc/license.rtf", "Docs/Hello/COPYING"):
             (tree / f).parent.mkdir(parents=True, exist_ok=True)
@@ -317,7 +317,7 @@ def test_check_layout():
             for f in files:
                 (tmp / f).parent.mkdir(parents=True, exist_ok=True)
                 (tmp / f).write_text("")
-            errors, suggestions = check_layout.check(tmp, "Hello")
+            errors, _, suggestions = check_layout.check(tmp, "Hello")
         return [p for p, _ in errors], [p for p, _ in suggestions]
 
     good = (
@@ -337,6 +337,14 @@ def test_check_layout():
     assert layout(*good, "readme.txt", ".git/x.dll") == ([], [])
     assert layout("Contrib/Hello/Hello.dpr")[0] == ["LICENSE"]
     assert layout("Contrib/Hello/Hello.dpr", "Docs/Hello/License.txt")[0] == []
+    # Not strict, a missing license is a warning and the rest still errors
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        (tmp / "Contrib/hello").mkdir(parents=True)
+        (tmp / "Contrib/hello/hello.c").write_text("")
+        errors, warnings, _ = check_layout.check(tmp, "Hello", strict=False)
+        assert [p for p, _ in errors] == ["Contrib/Hello"], errors
+        assert [p for p, _ in warnings] == ["LICENSE"], warnings
     assert layout("LICENSE", "Contrib/hello/hello.c")[0] == ["Contrib/Hello"]
     assert layout("LICENSE", "Contrib/Hello/notes.txt")[0] == ["Contrib/Hello"]
     assert layout("LICENSE", "contrib/Hello/a.c")[0] == ["contrib", "Contrib/Hello"]

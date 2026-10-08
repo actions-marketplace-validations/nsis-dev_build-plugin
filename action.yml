@@ -21,6 +21,9 @@ inputs:
   crt:
     description: C/C++ only; static (link the C runtime statically) or none (no CRT, entry point DllMain)
     default: static
+  strict:
+    description: Fail on every layout violation; false makes a missing LICENSE a warning and leaves the installer's license page out, for legacy packages
+    default: "true"
   release:
     description: Attach the files to the release that triggered the run; false for a check build with another toolchain
     default: "true"
@@ -61,6 +64,7 @@ runs:
       env:
         NAME: ${{ inputs.name }}
         TOOLCHAIN: ${{ steps.vars.outputs.toolchain }}
+        STRICT: ${{ inputs.strict }}
         PY: ${{ steps.vars.outputs.python }}
       run: '"$PY" "$GITHUB_ACTION_PATH/scripts/check_layout.py"'
 
@@ -126,6 +130,7 @@ runs:
         NAME: ${{ inputs.name }}
         VERSION: ${{ steps.archive.outputs.version }}
         TREE: ${{ steps.archive.outputs.tree }}
+        STRICT: ${{ inputs.strict }}
         OUTPUT_DIR: ${{ runner.temp }}/dist
         PY: ${{ steps.vars.outputs.python }}
       run: '"$PY" "$GITHUB_ACTION_PATH/scripts/installer.py"'

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Check the Plugin repository in the working directory follows the NSISDIR-shaped layout.
 
-Configured through the environment variable NAME, set by action.yml.
+Configured through the environment variables NAME, TOOLCHAIN and STRICT, set by action.yml.
 """
 
 import sys
@@ -14,9 +14,13 @@ from toolchain import SOURCE_EXTS
 KNOWN_DIRS = ("Contrib", "Docs", "Examples", "Include", "Plugins")
 
 
-def check(root, name, headers_only=False):
-    """(errors, suggestions), each a list of (path relative to root, message)."""
-    errors, suggestions = [], []
+def check(root, name, headers_only=False, strict=True):
+    """(errors, warnings, suggestions), each a list of (path relative to root, message).
+
+    Not strict, the violations legacy packages can't fix themselves are warnings instead.
+    """
+    errors, warnings, suggestions = [], [], []
+    lenient = errors if strict else warnings
     top = {p.name: p for p in root.iterdir()}
 
     for known in KNOWN_DIRS:
@@ -61,7 +65,7 @@ def check(root, name, headers_only=False):
                 )
 
     if find_license(root) is None:
-        errors.append(
+        lenient.append(
             (
                 "LICENSE",
                 f"add a LICENSE at the top level or in Docs/{name}/, the installer shows it",
@@ -71,7 +75,7 @@ def check(root, name, headers_only=False):
         suggestions.append(
             ("README.md", "consider a top-level README, it ships in the archive")
         )
-    return errors, suggestions
+    return errors, warnings, suggestions
 
 
 def main():
@@ -79,11 +83,19 @@ def main():
     if not name:
         print("::error::name is required", flush=True)
         return 1
-    errors, suggestions = check(Path.cwd(), name, env("TOOLCHAIN") == "none")
-    for level, findings in (("error", errors), ("notice", suggestions)):
+    errors, warnings, suggestions = check(
+        Path.cwd(), name, env("TOOLCHAIN") == "none", env("STRICT") != "false"
+    )
+    for level, findings in (
+        ("error", errors),
+        ("warning", warnings),
+        ("notice", suggestions),
+    ):
         for path, message in findings:
             print(f"::{level} file={path}::{message}")
-    print(f"{len(errors)} error(s), {len(suggestions)} suggestion(s)")
+    print(
+        f"{len(errors)} error(s), {len(warnings)} warning(s), {len(suggestions)} suggestion(s)"
+    )
     return 1 if errors else 0
 
 
