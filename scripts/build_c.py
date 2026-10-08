@@ -30,6 +30,7 @@ from common import (
     run,
     set_output,
     split,
+    stage_source_tree,
     verify_dll,
 )
 from toolchain import C_EXTS, CXX_EXTS
@@ -413,6 +414,7 @@ def build():
 
     sources, resources, cxx = expand_sources(split(env("SOURCES")))
     fetch_plugin_api(PINNED_NSIS_VERSION, plugin_api)
+    stage_source_tree(plugin_api, Path.cwd())
 
     cfg = {
         "name": name,

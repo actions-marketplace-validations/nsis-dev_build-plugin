@@ -13,6 +13,8 @@ from toolchain import SOURCE_EXTS
 
 # Folders that mirror NSISDIR, spelled the way NSIS spells them
 KNOWN_DIRS = ("Contrib", "Docs", "Examples", "Include", "Plugins")
+# Where the build puts the NSIS plugin API, as in the NSIS source tree
+RESERVED = ("Contrib/ExDLL", "Source")
 
 
 def check(root, name, headers_only=False, strict=True, prebuilt=False):
@@ -29,6 +31,19 @@ def check(root, name, headers_only=False, strict=True, prebuilt=False):
         for entry in top:
             if entry != known and entry.lower() == known.lower():
                 errors.append((entry, f"rename {entry}/ to {known}/"))
+
+    for reserved in RESERVED:
+        parent, _, leaf = reserved.rpartition("/")
+        folder = root / parent if parent else root
+        for entry in folder.iterdir() if folder.is_dir() else ():
+            if entry.name.lower() == leaf.lower():
+                rel = entry.relative_to(root).as_posix()
+                errors.append(
+                    (
+                        rel,
+                        f"{rel}/ is the NSIS plugin API the action provides, remove it",
+                    )
+                )
 
     if "Plugins" in top and not prebuilt:
         errors.append(("Plugins", "Plugins/ is built by the action, don't commit it"))

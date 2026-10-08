@@ -47,8 +47,9 @@ A source file is any file under `Contrib/<name>/`, at any depth, with one of the
 
 - There MUST NOT be a `*.dll` file anywhere in the repository. Paths with a component starting with `.`, such as `.git/`, are exempt.
 - There MUST NOT be a top-level `Plugins/`.
+- There MUST NOT be a `Contrib/ExDLL/` or a top-level `Source/`, compared case-insensitively. A builder MAY put the NSIS plugin API there, at its NSIS source tree paths, so the Package builds as it would inside the NSIS source.
 
-A Prebuilt Package is exempt from both, as §2.5 says.
+A Prebuilt Package is exempt from the first two, as §2.5 says.
 
 ### 2.5 Prebuilt Package
 

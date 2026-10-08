@@ -22,6 +22,7 @@ from common import (
     run,
     set_output,
     split,
+    stage_source_tree,
     verify_dll,
 )
 from toolchain import PASCAL_EXTS
@@ -135,6 +136,7 @@ def build():
 
     project = find_project(env("PROJECT")).resolve()
     fetch_plugin_api(PINNED_NSIS_VERSION, plugin_api)
+    stage_source_tree(plugin_api, Path.cwd())
 
     cfg = {
         "project": project,

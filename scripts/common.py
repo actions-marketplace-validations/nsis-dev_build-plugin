@@ -7,6 +7,7 @@ import hashlib
 import io
 import os
 import re
+import shutil
 import struct
 import subprocess
 import sys
@@ -141,6 +142,15 @@ def fetch_plugin_api(version, plugin_api):
             if member is None:
                 raise BuildError(f"{filename} has no {f}")
             (target / Path(f).name).write_bytes(member.read())
+
+
+def stage_source_tree(plugin_api, root):
+    """Copies API_FILES to their NSIS source tree paths under root, so Contrib/<name>/ builds
+    as it would inside the NSIS source, includes like "../ExDLL/pluginapi.h" and all."""
+    for f in API_FILES:
+        dst = Path(root) / f
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(Path(plugin_api) / "nsis" / Path(f).name, dst)
 
 
 def pe_machine(data):

@@ -93,6 +93,8 @@ A Package repository is laid out like NSISDIR, as specified in [SPEC.md](SPEC.md
 
 `Contrib`, `Docs`, `Examples`, `Include` and `Plugins` must be spelled that way.
 
+The build runs as if the repository were the NSIS source tree: before compiling, the action puts the plugin API at `Contrib/ExDLL/` (`pluginapi.h`, `pluginapi.c`, `nsis_tchar.h`, `nsis.pas`) and `Source/exehead/api.h`, so includes like `"../ExDLL/pluginapi.h"` resolve. Don't commit those folders; the layout check fails if you do. `#include "pluginapi.h"` and `<nsis/pluginapi.h>` work too.
+
 ## Inputs
 
 | Name           | Default                              | Description                                                                                                                                                                                                                                                                                                                                                 |

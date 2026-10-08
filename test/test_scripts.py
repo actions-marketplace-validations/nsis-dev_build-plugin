@@ -233,6 +233,17 @@ def test_pe_machine():
         raises(common.BuildError, common.verify_dll, Path(tmp) / "missing.dll", 0x8664)
 
 
+def test_stage_source_tree():
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        (tmp / "api/nsis").mkdir(parents=True)
+        for f in common.API_FILES:
+            (tmp / "api/nsis" / Path(f).name).write_text(f)
+        common.stage_source_tree(tmp / "api", tmp / "repo")
+        for f in common.API_FILES:
+            assert (tmp / "repo" / f).read_text() == f
+
+
 def test_resolve_version():
     sha = "0123456789abcdef"
     assert archive.resolve_version("tag", "v1.2.3", sha) == "1.2.3"
@@ -367,6 +378,11 @@ def test_check_layout():
     ]
     # Separate from Docs/, which a case-insensitive file system would merge it into
     assert layout("LICENSE", "Contrib/Hello/a.c", "docs/x.md")[0] == ["docs"]
+    # The build puts the NSIS plugin API there
+    assert layout(*good, "Contrib/exdll/exdll.h", "Source/exehead/api.h")[0] == [
+        "Contrib/exdll",
+        "Source",
+    ]
 
 
 def test_check_layout_prebuilt():
