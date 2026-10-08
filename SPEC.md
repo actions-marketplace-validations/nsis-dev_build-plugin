@@ -8,7 +8,7 @@ The key words MUST, MUST NOT, SHOULD and MAY are to be interpreted as described 
 
 ## 1. Terms
 
-- **Package**: what one repository releases. It has one **name**, `<name>`, matching `[A-Za-z0-9_]+`. Names are case-sensitive.
+- **Package**: what one repository releases. It has one **name**, `<name>`, matching `[A-Za-z0-9_-]+`. Names are case-sensitive.
 - **Plugin Package**: a Package that releases a DLL called from NSIS scripts as `<name>::Function`.
 - **Data Package**: a Package with nothing to build, such as headers, graphics or language files.
 - **Target**: one of `x86-ansi`, `x86-unicode`, `amd64-unicode`, `arm64-unicode`.
