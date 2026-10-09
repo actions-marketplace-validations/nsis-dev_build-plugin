@@ -1,5 +1,6 @@
 ; Uniform installer for an NSIS plugin: copies the Plugins directory of a Release Archive tree into NSISDIR.
-; makensis -DNAME=Foo -DVERSION=1.0.0 -DSRC=<dir> -DLICENSE=<file> -DOUTFILE=<exe> installer.nsi
+; makensis -DNAME=Foo -DVERSION=1.0.0 -DSRC=<dir> [-DLICENSE=<file>] -DOUTFILE=<exe> installer.nsi
+; Without LICENSE, there is no license page
 !ifndef NAME
   !error "define NAME"
 !endif
@@ -10,10 +11,6 @@
 
 !ifndef SRC
   !error "define SRC"
-!endif
-
-!ifndef LICENSE
-  !error "define LICENSE"
 !endif
 
 !ifndef OUTFILE
@@ -33,7 +30,9 @@ InstallDirRegKey HKLM "Software\NSIS" ""
 
 !include MUI2.nsh
 
-!insertmacro MUI_PAGE_LICENSE "${LICENSE}"
+!ifdef LICENSE
+  !insertmacro MUI_PAGE_LICENSE "${LICENSE}"
+!endif
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
 !insertmacro MUI_LANGUAGE "English"

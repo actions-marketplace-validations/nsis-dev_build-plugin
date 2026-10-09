@@ -165,6 +165,8 @@ def test_toolchain_inputs():
     check("none", "", "")
     raises(common.BuildError, check, "none", "a/*.c", "")
     raises(common.BuildError, check, "none", "", "a/Cargo.toml")
+    check("prebuilt", "", "")
+    raises(common.BuildError, check, "prebuilt", "a/*.c", "")
 
 
 def test_pick_toolchain():
@@ -231,6 +233,17 @@ def test_pe_machine():
         raises(common.BuildError, common.verify_dll, Path(tmp) / "missing.dll", 0x8664)
 
 
+def test_stage_source_tree():
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        (tmp / "api/nsis").mkdir(parents=True)
+        for f in common.API_FILES:
+            (tmp / "api/nsis" / Path(f).name).write_text(f)
+        common.stage_source_tree(tmp / "api", tmp / "repo")
+        for f in common.API_FILES:
+            assert (tmp / "repo" / f).read_text() == f
+
+
 def test_resolve_version():
     sha = "0123456789abcdef"
     assert archive.resolve_version("tag", "v1.2.3", sha) == "1.2.3"
@@ -287,7 +300,7 @@ def test_stage():
 
         (tree / "LICENSE").unlink()
         (tree / "LICENSE-MIT").unlink()
-        raises(common.BuildError, installer.find_license, tree)
+        assert installer.find_license(tree) is None
         # Without a top-level one, the shallowest under Docs/ is shown
         for f in ("Docs/Hello/doc/license.rtf", "Docs/Hello/COPYING"):
             (tree / f).parent.mkdir(parents=True, exist_ok=True)
@@ -309,6 +322,13 @@ def test_stage():
         assert "LICENSE-APACHE" in joined and "mit text" in joined, joined
         raises(common.BuildError, archive.stage, tree, tmp / "repo", tmp / "repo")
 
+        # prebuilt: the repository is its own plugins directory
+        (tmp / "repo/Plugins/x86-ansi").mkdir(parents=True)
+        (tmp / "repo/Plugins/x86-ansi/Hello.dll").write_text("")
+        archive.stage(tree, tmp / "repo", tmp / "repo")
+        assert (tree / "Plugins/x86-ansi/Hello.dll").is_file()
+        assert not (tree / "Contrib").exists()
+
 
 def test_check_layout():
     def layout(*files):
@@ -317,7 +337,7 @@ def test_check_layout():
             for f in files:
                 (tmp / f).parent.mkdir(parents=True, exist_ok=True)
                 (tmp / f).write_text("")
-            errors, suggestions = check_layout.check(tmp, "Hello")
+            errors, _, suggestions = check_layout.check(tmp, "Hello")
         return [p for p, _ in errors], [p for p, _ in suggestions]
 
     good = (
@@ -337,6 +357,14 @@ def test_check_layout():
     assert layout(*good, "readme.txt", ".git/x.dll") == ([], [])
     assert layout("Contrib/Hello/Hello.dpr")[0] == ["LICENSE"]
     assert layout("Contrib/Hello/Hello.dpr", "Docs/Hello/License.txt")[0] == []
+    # Not strict, a missing license is a warning and the rest still errors
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        (tmp / "Contrib/hello").mkdir(parents=True)
+        (tmp / "Contrib/hello/hello.c").write_text("")
+        errors, warnings, _ = check_layout.check(tmp, "Hello", strict=False)
+        assert [p for p, _ in errors] == ["Contrib/Hello"], errors
+        assert [p for p, _ in warnings] == ["LICENSE"], warnings
     assert layout("LICENSE", "Contrib/hello/hello.c")[0] == ["Contrib/Hello"]
     assert layout("LICENSE", "Contrib/Hello/notes.txt")[0] == ["Contrib/Hello"]
     assert layout("LICENSE", "contrib/Hello/a.c")[0] == ["contrib", "Contrib/Hello"]
@@ -350,6 +378,51 @@ def test_check_layout():
     ]
     # Separate from Docs/, which a case-insensitive file system would merge it into
     assert layout("LICENSE", "Contrib/Hello/a.c", "docs/x.md")[0] == ["docs"]
+    # The build puts the NSIS plugin API there
+    assert layout(*good, "Contrib/exdll/exdll.h", "Source/exehead/api.h")[0] == [
+        "Contrib/exdll",
+        "Source",
+    ]
+
+
+def test_check_layout_prebuilt():
+    def dll(machine):
+        header = bytearray(128)
+        struct.pack_into("<I", header, 60, 64)
+        header[64:68] = b"PE\0\0"
+        struct.pack_into("<H", header, 68, machine)
+        return bytes(header)
+
+    def errors(files):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            for f, data in files.items():
+                (tmp / f).parent.mkdir(parents=True, exist_ok=True)
+                (tmp / f).write_bytes(data)
+            return [p for p, _ in check_layout.check(tmp, "Hello", prebuilt=True)[0]]
+
+    x86, amd64 = dll(0x014C), dll(0x8664)
+    ok = {"LICENSE": b"", "Plugins/x86-ansi/Hello.dll": x86}
+    # No Contrib/Hello/ needed, Plugins/ is allowed
+    assert errors(ok) == []
+    assert errors({**ok, "Plugins/amd64-unicode/Hello.dll": amd64}) == []
+    assert errors({"LICENSE": b""}) == ["Plugins/x86-ansi/Hello.dll"]
+    # PE machine must match the target, and a non-PE file is no DLL
+    assert errors({**ok, "Plugins/amd64-unicode/Hello.dll": x86}) == [
+        "Plugins/amd64-unicode/Hello.dll"
+    ]
+    assert errors({"LICENSE": b"", "Plugins/x86-ansi/Hello.dll": b"MZ"}) == [
+        "Plugins/x86-ansi/Hello.dll"
+    ]
+    # Only the named DLL in a known target folder
+    assert errors({**ok, "Plugins/Hello.dll": x86}) == ["Plugins/Hello.dll"]
+    assert errors({**ok, "Plugins/x86-ansi/Other.dll": x86}) == [
+        "Plugins/x86-ansi/Other.dll"
+    ]
+    assert errors({**ok, "Plugins/Unicode/Hello.dll": x86}) == [
+        "Plugins/Unicode/Hello.dll"
+    ]
+    assert errors({**ok, "Contrib/Hello/Hello.dll": x86}) == ["Contrib/Hello/Hello.dll"]
 
 
 if __name__ == "__main__":

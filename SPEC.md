@@ -8,9 +8,10 @@ The key words MUST, MUST NOT, SHOULD and MAY are to be interpreted as described 
 
 ## 1. Terms
 
-- **Package**: what one repository releases. It has one **name**, `<name>`, matching `[A-Za-z0-9_]+`. Names are case-sensitive.
+- **Package**: what one repository releases. It has one **name**, `<name>`, matching `[A-Za-z0-9_-]+`. Names are case-sensitive.
 - **Plugin Package**: a Package that releases a DLL called from NSIS scripts as `<name>::Function`.
 - **Data Package**: a Package with nothing to build, such as headers, graphics or language files.
+- **Prebuilt Package**: a Plugin Package that commits its DLLs instead of their source, for plugins whose source is lost. It is NOT RECOMMENDED: its DLLs can't be rebuilt or verified.
 - **Target**: one of `x86-ansi`, `x86-unicode`, `amd64-unicode`, `arm64-unicode`.
 - **License file**: a regular file whose name, cut at the first `.`, `-` or `_` and compared case-insensitively, is `LICENSE`, `LICENCE`, `COPYING` or `UNLICENSE`. For example `LICENSE`, `License.md` and `LICENSE-MIT` all count.
 - **Readme file**: as a License file, with the stem `README`.
@@ -27,7 +28,7 @@ The repository root is laid out like NSISDIR.
 | `Include/`         | MAY exist, with any content                                            | MAY exist, with any content     | yes                                       |
 | License file       | MUST exist at the top level or under `Docs/<name>/`                    | same                            | top level only                            |
 | Readme file        | SHOULD exist at the top level                                          | same                            | yes                                       |
-| `Plugins/`         | MUST NOT exist                                                         | MUST NOT exist                  | built (§3)                                |
+| `Plugins/`         | MUST NOT exist, except in a Prebuilt Package (§2.5)                    | MUST NOT exist                  | built (§3)                                |
 
 ### 2.1 Spelling
 
@@ -46,8 +47,18 @@ A source file is any file under `Contrib/<name>/`, at any depth, with one of the
 
 - There MUST NOT be a `*.dll` file anywhere in the repository. Paths with a component starting with `.`, such as `.git/`, are exempt.
 - There MUST NOT be a top-level `Plugins/`.
+- There MUST NOT be a `Contrib/ExDLL/` or a top-level `Source/`, compared case-insensitively. A builder MAY put the NSIS plugin API there, at its NSIS source tree paths, so the Package builds as it would inside the NSIS source.
 
-### 2.5 Everything else
+A Prebuilt Package is exempt from the first two, as §2.5 says.
+
+### 2.5 Prebuilt Package
+
+- `Contrib/<name>/` MAY exist and is not shipped.
+- `Plugins/<target>/<name>.dll` MUST exist for at least one Target. Each DLL's PE machine MUST match its Target, as in §3.
+- There MUST NOT be any other `*.dll` file, with the same exemption as in §2.4.
+- A validator SHOULD warn that the Package is prebuilt.
+
+### 2.6 Everything else
 
 Other top-level entries, such as `scripts/`, `.github/`, `CHANGELOG.md` or a workspace `Cargo.toml`, are allowed. They are ignored and MUST NOT be shipped.
 
@@ -67,9 +78,12 @@ Its root maps onto NSISDIR and contains exactly:
 Producing an installer is OPTIONAL. If produced, it is named `<name>-<version>-setup.exe` and:
 
 - MUST copy the Release Archive's folders into an existing NSIS installation, and MUST NOT install the License or Readme files.
-- MUST show a license page. Its text is every top-level License file, shortest name first, joined; without one, the shallowest License file under `Docs/<name>/`.
+- MUST show a license page if the Release Archive's repository has a License file. Its text is every top-level License file, shortest name first, joined; without one, the shallowest License file under `Docs/<name>/`. Without any License file, which only a lenient validator accepts, there is no license page.
 
 ## 5. Conformance
 
 - A **validator** conforms if it rejects every repository that violates a MUST or MUST NOT of §2 and accepts every other. It SHOULD report a missing Readme file as a warning.
-- A **packager** conforms if, given a valid repository, it produces a Release Archive as specified in §3, and an installer, if any, as specified in §4.
+- A validator MAY offer a **lenient** mode for legacy Packages whose authors can no longer be asked to fix them. In it, the violations listed below MUST be reported as warnings instead of rejecting the repository; every other rule applies unchanged. The list:
+  - no License file (§2)
+- A **packager** MAY package a repository that a lenient validator accepts.
+- A packager conforms if, given a valid repository, it produces a Release Archive as specified in §3, and an installer, if any, as specified in §4.

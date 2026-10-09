@@ -37,6 +37,8 @@ TOOLCHAINS = {
     "rust": Toolchain("build_rust", "Windows", "project", {".rs"}, False),
     # Headers and examples only: nothing to build, so nothing to take
     "none": Toolchain("", "", "", frozenset(), False),
+    # Committed DLLs for plugins whose source is lost: shipped as they are
+    "prebuilt": Toolchain("", "", "", frozenset(), False),
 }
 SOURCE_EXTS = frozenset().union(*(t.exts for t in TOOLCHAINS.values()))
 
@@ -86,7 +88,15 @@ def main(command):
             set_output("python", sys.executable)
             # The installer is still compiled with the pinned NSIS
             set_output("version", PINNED_NSIS_VERSION)
-            set_output("output-dir", Path(env("OUTPUT_DIR", "out")).resolve())
+            if name == "prebuilt":
+                print(
+                    "::warning::toolchain prebuilt is an antipattern: it ships committed DLLs "
+                    "that nobody can rebuild or verify, use it only for plugins whose source is lost",
+                    flush=True,
+                )
+            # prebuilt's Plugins/ is the repository's own
+            output_dir = "." if name == "prebuilt" else env("OUTPUT_DIR", "out")
+            set_output("output-dir", Path(output_dir).resolve())
         return
     if command == "resolve":
         # So the later action.yml steps reuse this interpreter instead of guessing
