@@ -14,7 +14,7 @@ Release [NSIS](https://nsis.sourceforge.io/) packages from GitHub: plugins built
 Build on every push. When a release is published, attach these files to it:
 
 - a Release Archive
-- a Package Installer
+- a Package Installer, with an uninstaller that removes only what it installed
 - checksums, and build attestations on request
 
 ```yaml

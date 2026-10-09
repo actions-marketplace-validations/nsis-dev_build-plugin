@@ -79,6 +79,7 @@ Producing an installer is OPTIONAL. If produced, it is named `<name>-<version>-s
 
 - MUST copy the Release Archive's folders into an existing NSIS installation, and MUST NOT install the License or Readme files.
 - MUST show a license page if the Release Archive's repository has a License file. Its text is every top-level License file, shortest name first, joined; without one, the shallowest License file under `Docs/<name>/`. Without any License file, which only a lenient validator accepts, there is no license page.
+- MAY install an uninstaller. If it does, the uninstaller MUST remove only the files and folders the installer created. It MUST NOT remove a path that existed before the installer ran, nor `Contrib/`, `Docs/`, `Examples/`, `Include/`, `Plugins/`, `Plugins/<target>/`, or the shared `Contrib/Graphics/` (and its `Checks/`, `Header/`, `Icons/` and `Wizard/`), `Contrib/Language files/` and `Contrib/UIs/`, even if the installer created them.
 
 ## 5. Conformance
 
