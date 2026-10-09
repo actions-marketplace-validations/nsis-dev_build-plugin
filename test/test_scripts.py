@@ -425,6 +425,42 @@ def test_check_layout_prebuilt():
     assert errors({**ok, "Contrib/Hello/Hello.dll": x86}) == ["Contrib/Hello/Hello.dll"]
 
 
+def test_installer_file_list():
+    with tempfile.TemporaryDirectory() as tmp:
+        tree = Path(tmp)
+        for f in (
+            "Plugins/x86-unicode/Hello.dll",
+            "Contrib/Hello/a.ini",
+            "Contrib/Graphics/Icons/hello.ico",
+            "LICENSE",
+        ):
+            (tree / f).parent.mkdir(parents=True, exist_ok=True)
+            (tree / f).write_text("")
+        install, uninstall = installer.file_list(tree).split("!macroend\n")[:2]
+        # NSISDIR's own folders are created, never logged or removed
+        assert install.splitlines()[1:] == [
+            '  CreateDirectory "$INSTDIR\\Contrib"',
+            '  CreateDirectory "$INSTDIR\\Contrib\\Graphics"',
+            '  CreateDirectory "$INSTDIR\\Contrib\\Graphics\\Icons"',
+            '  !insertmacro PackageFile "Contrib\\Graphics\\Icons\\hello.ico"',
+            '  !insertmacro PackageDir "Contrib\\Hello"',
+            '  !insertmacro PackageFile "Contrib\\Hello\\a.ini"',
+            '  CreateDirectory "$INSTDIR\\Plugins"',
+            '  CreateDirectory "$INSTDIR\\Plugins\\x86-unicode"',
+            '  !insertmacro PackageFile "Plugins\\x86-unicode\\Hello.dll"',
+        ], install
+        # Files before the folders that hold them; LICENSE is not shipped
+        assert uninstall.splitlines()[1:] == [
+            '  !insertmacro UnPackageFile "Plugins\\x86-unicode\\Hello.dll"',
+            '  !insertmacro UnPackageFile "Contrib\\Hello\\a.ini"',
+            '  !insertmacro UnPackageDir "Contrib\\Hello"',
+            '  !insertmacro UnPackageFile "Contrib\\Graphics\\Icons\\hello.ico"',
+        ], uninstall
+        (tree / "Include").mkdir()
+        (tree / "Include/a=b.nsh").write_text("")
+        raises(common.BuildError, installer.file_list, tree)
+
+
 if __name__ == "__main__":
     tests = [f for name, f in sorted(globals().items()) if name.startswith("test_")]
     for test in tests:

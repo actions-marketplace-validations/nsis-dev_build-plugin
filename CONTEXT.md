@@ -36,5 +36,5 @@ The zip attached to a release, `<Name>-<version>.zip`. It contains the built `Pl
 _Avoid_: bundle, distribution
 
 **Package Installer**:
-The Windows installer attached to a release, `<Name>-<version>-setup.exe`. It copies the Release Archive's NSISDIR folders into an existing NSIS installation; the LICENSE is not copied, it is shown on the license page. A top-level LICENSE wins, and several (`LICENSE-MIT`, `LICENSE-APACHE`) are joined into one page; without one, the shallowest one under `Docs/` is shown. With `strict: false` a Package may have no LICENSE, and then there is no license page.
+The Windows installer attached to a release, `<Name>-<version>-setup.exe`. It copies the Release Archive's NSISDIR folders into an existing NSIS installation; the LICENSE is not copied, it is shown on the license page. A top-level LICENSE wins, and several (`LICENSE-MIT`, `LICENSE-APACHE`) are joined into one page; without one, the shallowest one under `Docs/` is shown. With `strict: false` a Package may have no LICENSE, and then there is no license page. It also installs an uninstaller, `Uninstall/<Name>.exe` in NSISDIR, listed in Add/Remove Programs, which removes only the files and folders the installer created, never NSISDIR's own folders.
 _Avoid_: setup

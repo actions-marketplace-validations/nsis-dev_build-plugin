@@ -33,6 +33,55 @@ def find_license(tree):
     return combined
 
 
+# The Release Archive folders the installer copies into NSISDIR
+SHIPPED = ("Plugins", "Contrib", "Docs", "Examples", "Include")
+# Folders of NSISDIR itself: created if missing, never removed. Graphics and
+# language files go into the shared Contrib ones, so only their files are removed
+STRUCTURE = {
+    *SHIPPED,
+    *(f"Plugins\\{t}" for t in common.TARGETS),
+    "Contrib\\Graphics",
+    *(f"Contrib\\Graphics\\{d}" for d in ("Checks", "Header", "Icons", "Wizard")),
+    "Contrib\\Language files",
+    "Contrib\\UIs",
+}
+
+
+def file_list(tree):
+    """installer.nsi macros that install, then uninstall, each shipped path one at a time.
+
+    Folders come before their contents, and the uninstall list is the reverse, so
+    files are deleted before the folders that held them. NSISDIR's own folders
+    are left out of the uninstall list.
+    """
+    paths = sorted(
+        p
+        for top in SHIPPED
+        if (tree / top).is_dir()
+        for p in [tree / top, *(tree / top).rglob("*")]
+    )
+    lines = []
+    for macro, prefix, order in (
+        ("PackageInstall", "", paths),
+        ("PackageUninstall", "Un", reversed(paths)),
+    ):
+        lines.append(f"!macro {macro}")
+        for p in order:
+            rel = str(p.relative_to(tree)).replace("/", "\\")
+            # = would end the path's INI key in the uninstall log, and $ is a
+            # variable at runtime but literal in File's source path
+            if "=" in rel or "$" in rel:
+                raise BuildError(f"{rel}: the installer can't ship a path with = or $")
+            if rel in STRUCTURE:
+                if not prefix:
+                    lines.append(f'  CreateDirectory "$INSTDIR\\{rel}"')
+                continue
+            kind = "Dir" if p.is_dir() else "File"
+            lines.append(f'  !insertmacro {prefix}Package{kind} "{rel}"')
+        lines.append("!macroend")
+    return "\n".join(lines) + "\n"
+
+
 def main():
     name, version, tree = env("NAME"), env("VERSION"), env("TREE")
     if not (name and version and tree):
@@ -50,6 +99,9 @@ def main():
     if not makensis:
         raise BuildError("makensis not found")
 
+    files = Path(tempfile.mkdtemp()) / "files.nsh"
+    files.write_text(file_list(tree), encoding="utf-8")
+
     cmd = [
         makensis,
         "-V2",
@@ -57,6 +109,7 @@ def main():
         f"-DVERSION={version}",
         f"-DSRC={tree}",
         f"-DOUTFILE={installer}",
+        f"-DFILES={files}",
     ]
     license = find_license(tree)
     if license:
